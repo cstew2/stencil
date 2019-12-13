@@ -106,6 +106,16 @@ void gl_render(uint32_t *image, int width, int height)
 	glfwSwapBuffers(window);
 }
 
+int gl_update(void)
+{
+	glfwSwapBuffers(window);
+	glfwPollEvents();
+	if(glfwWindowShouldClose(window)) {
+		return 1;
+	}
+	return 0;
+}
+
 void gl_cleanup(void)
 {
 	glDeleteTextures(1, &tex);
@@ -154,7 +164,7 @@ void gl_window_resize_callback(GLFWwindow *w, int width, int height)
 
 void gl_key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
-	if (key == GLFW_KEY_ESCAPE ) {
+	if (key == GLFW_KEY_ESCAPE) {
 		glfwSetWindowShouldClose(window, GL_TRUE);
 	}	
 }
@@ -253,7 +263,7 @@ void init_texture(int width, int height)
 	glActiveTexture(GL_TEXTURE0);
 	glGenTextures(1, &tex);
 	glBindTexture(GL_TEXTURE_2D, tex);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height,
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height,
 		     0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);

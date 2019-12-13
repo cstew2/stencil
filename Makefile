@@ -6,8 +6,11 @@ CFLAGS		=
 NVCC		= nvcc
 NVCFLAGS	=
 
-DCFLAGS         := -g -g -O0
-RCFLAGS         := -O2
+DCFLAGS         := -g -ggdb3 -O0
+RCFLAGS         := -march=native -O2 -pipe
+
+NVDCFLAGS       := -g -G
+NVRCFLAGS       := -O2
 
 SRC		= $(wildcard *.c)
 INC		= $(wildcard *.h)
@@ -17,16 +20,16 @@ NVSRC		= $(wildcard *.cu)
 NVINC		= $(wildcard *.cuh)
 NVOBJ	        = $(NVSRC:%.cu=%.o)
 
-LIBS		= -lglfw -lGLEW -lGLU -lGL -lm
+LIBS		= -lglfw -lGLEW -lGLU -lGL -lm -lpthread
 
 
 .PHONY: debug 
-debug: NVCFLAGS += $(DCFLAGS)
+debug: NVCFLAGS += $(NVDCFLAGS)
 debug: CFLAGS += $(DCFLAGS)
 debug: build
 
 .PHONY: release
-release: NVCFLAGS += $(RCFLAGS)
+release: NVCFLAGS += $(NVRCFLAGS)
 release: CFLAGS += $(RCFLAGS)
 release: build
 
@@ -45,5 +48,5 @@ build: $(OBJ) $(NVOBJ)
 
 .PHONY: clean
 clean:
-	@rm -f $(OBJ) $(NVOJB) $(TARGET)
+	@rm -f $(OBJ) $(NVOBJ) $(TARGET)
 	@echo Cleaned $(OBJ) $(NVOJB) and $(TARGET)
