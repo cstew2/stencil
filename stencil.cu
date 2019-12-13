@@ -12,7 +12,7 @@
 #include "stencil.cuh"
 #include "render.h"
 
-int delay = 200000;
+int delay = 0;
 
 struct thread_args {
 	int x;
@@ -36,16 +36,20 @@ int main(int argc, char **argv)
 		}
        	}
 	
-	int width = 25;
-	int height = 25;
+	int width = 2500;
+	int height = 2500;
 	int time = 500000;
 	float min = 0;
-	float max = 10  ;
+	float max = 10000;
 	float *initial_state = (float *) calloc(width*height, sizeof(float)); 
 
+	int bar_edge = width/32;
+	int bar_size = width/16;
+	
 	for(int y=1; y < height-1; y++) {
 		for(int x=1; x < width-1; x++) {
-			if(x == 2 || x == 3 || x == width-4 || x == width-3) {
+			if((x > bar_edge                  && x < bar_size+bar_edge) ||
+			   (x > width-(bar_size+bar_edge) && x < width - bar_edge)) {
 				initial_state[index_1d(x, y, width, height)] = max;
 			}
 		}
@@ -82,15 +86,15 @@ void serial_stencil(int width, int height, int time, float min, float max,
 
 	memcpy(a, initial_state, num * sizeof(float));
 
-	uint32_t *image = (uint32_t *) calloc(num, sizeof(float));
+	uint32_t *image = (uint32_t *) calloc(num, sizeof(uint32_t));
 	
-	int n_count = 9;
+	int n_count = 5;
 	float neighbours[n_count] = {0};
 	
 	for(int ticks=0; ticks < time; ticks++) {
 		for(int y=1; y < height-1; y++) {
 			for(int x=1; x < width-1; x++) {
-				moore_neighbours(x, y, width, height, a, neighbours);
+				von_neumann_neighbours(x, y, width, height, a, neighbours);
 				b[index_1d(x, y, width, height)] = average(n_count, neighbours);
 			}
 		}
@@ -107,7 +111,7 @@ void serial_stencil(int width, int height, int time, float min, float max,
 		a = b;
 		b = temp;
 		temp = NULL;
-		usleep(delay);
+		//usleep(delay);
 	}
 	
 	free(image);
@@ -125,7 +129,7 @@ void threaded_stencil(int width, int height, int time, float min, float max, int
 
 	memcpy(a, initial_state, num * sizeof(float));
 
-	uint32_t *image = (uint32_t *) calloc(num, sizeof(float));
+	uint32_t *image = (uint32_t *) calloc(num, sizeof(uint32_t));
 
 	pthread_t thread[threads];
 	pthread_attr_t attr;
@@ -218,7 +222,7 @@ void *threaded_update(void *args)
 	float neighbours[n_count] = {0};
 	for(int i=arg.y; i < arg.height; i++) {
 		for(int j=arg.x; j < arg.width; j++) {
-			von_neumann_neighbours(i, j, arg.width, arg.height, arg.a, neighbours);
+			moore_neighbours(i, j, arg.width, arg.height, arg.a, neighbours);
 			arg.b[index_1d(i, j, arg.width, arg.height)] = average(n_count, neighbours);
 		}
 	}
@@ -284,27 +288,20 @@ __device__ __host__ int index_1d_mod(int x, int y, int width, int height)
 
 __host__ void to_colour(float *state, float min, float max, int count, uint32_t *colours)
 {
-	uint32_t R;
-	uint32_t G;
-	uint32_t B;
-	uint32_t A = 0xFF000000;
+	uint8_t R;
+	uint8_t G;
+	uint8_t B;
+	uint8_t A = 0xFF;
 	
 	for(int i=0; i < count; i++) {
 		//normalize to [0,1]
 		float s_i = (state[i] - min)/(max - min);
 		
 		//calculate RGB value
-		R = ( 0x000000FF * s_i) + 0x00000000;
-		G =   0x00000000;
-		B = (-0x00FF0000 * s_i) + 0x00FF0000;
+		R =  (0xFF * s_i);
+		G =   0x00;
+		B = -(0xFF * s_i) + 0xFF;
 
-		colours[i] = (uint32_t)(R | G | B | A);
-
-		if(i%25==0) {
-			printf("\n");
-		}
-		printf("%X ", colours[i]);
-		
+		colours[i] = (A << 24) | (B << 16) | (G << 8) | R;
 	}
-	printf("\n");
 }
