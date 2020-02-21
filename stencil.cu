@@ -6,13 +6,15 @@
 #include <unistd.h>
 #include <pthread.h>
 
+#include <omp.h>
+
 #include <cuda.h>
 #include <cuda_runtime.h>
 
 #include "stencil.cuh"
 #include "render.h"
 
-int delay = 0;
+int delay = 500000;
 
 struct thread_args {
 	int x;
@@ -26,18 +28,24 @@ struct thread_args {
 int main(int argc, char **argv)
 {
 	bool cuda = false;
+	bool posix = false;
+	bool openmp = false;
 	int threads = 0;
 	for(int i=1; i < argc; i++) {
-		if(strcmp(argv[i], "--cuda")) {
+		if(!strcmp(argv[i], "--cuda")) {
 			cuda = true;
 		}
-		else if(strcmp(argv[i], "--thread")) {
+		else if(!strcmp(argv[i], "--thread")) {
+			posix = true;
 			threads = atoi(argv[++i]);
+		}
+		else if(!strcmp(argv[i], "--openmp")) {
+			openmp = true;
 		}
        	}
 	
-	int width = 2500;
-	int height = 2500;
+	int width = 200;
+	int height = 200;
 	int time = 500000;
 	float min = 0;
 	float max = 10000;
@@ -55,18 +63,27 @@ int main(int argc, char **argv)
 		}
 	}
 	
-	gl_init(width, height);
+	if(gl_init(width, height)) {
+		return -1;
+	}
 
 	if(cuda) {
-		
-		parallel_stencil(width, height, time, min, max,
+		printf("Using CUDA\n");
+		cuda_stencil(width, height, time, min, max,
 				 initial_state);
 	}
-	else if(threads > 0) {
+	else if(posix) {
+		printf("Using posix threads\n");
 		threaded_stencil(width, height, time, min, max, threads,
 				 initial_state);
 	}
+	else if(openmp) {
+		printf("Using openmp\n");
+		openmp_stencil(width, height, time, min, max, threads,
+				 initial_state);
+	}
 	else {
+		printf("Serial\n");
 		serial_stencil(width, height, time, min, max,
 			       initial_state);
 	}
@@ -111,7 +128,6 @@ void serial_stencil(int width, int height, int time, float min, float max,
 		a = b;
 		b = temp;
 		temp = NULL;
-		//usleep(delay);
 	}
 	
 	free(image);
@@ -165,8 +181,6 @@ void threaded_stencil(int width, int height, int time, float min, float max, int
 		a = b;
 		b = temp;
 		temp = NULL;
-
-		usleep(delay);
 	}
 	
 	free(image);
@@ -174,7 +188,51 @@ void threaded_stencil(int width, int height, int time, float min, float max, int
 	free(b);
 }
 
-void parallel_stencil(int width, int height, int time, float min, float max,
+void openmp_stencil(int width, int height, int time, float min, float max, int threads,
+		    float *initial_state)
+{
+	int num = width*height;
+	float *a = (float *) calloc(num, sizeof(float));
+	float *b = (float *) calloc(num, sizeof(float));
+	float *temp;
+
+	memcpy(a, initial_state, num * sizeof(float));
+
+	uint32_t *image = (uint32_t *) calloc(num, sizeof(uint32_t));
+	
+	int n_count = 5;
+	float neighbours[n_count] = {0};
+	
+	for(int ticks=0; ticks < time; ticks++) {
+                #pragma omp parallel for private(neighbours) collapse(2)
+		for(int y=1; y < height-1; y++) {
+			for(int x=1; x < width-1; x++) {
+				von_neumann_neighbours(x, y, width, height, a, neighbours);
+				b[index_1d(x, y, width, height)] = average(n_count, neighbours);
+			}
+		}
+
+		//render image
+		to_colour(a, min, max, num, image);
+		gl_render(image, width, height);
+		if(gl_update()) {
+			break;
+		}
+			
+		//swap state buffers
+		temp = a;
+		a = b;
+		b = temp;
+		temp = NULL;
+
+	}
+	
+	free(image);
+	free(a);
+	free(b);	
+}
+
+void cuda_stencil(int width, int height, int time, float min, float max,
 		      float *initial_state)
 {
 	int num = width*height;
@@ -205,8 +263,6 @@ void parallel_stencil(int width, int height, int time, float min, float max,
 		a = b;
 		b = temp;
 		temp = NULL;
-
-		usleep(delay);
 	}
 	
 	cudaFree(image);
@@ -229,7 +285,7 @@ void *threaded_update(void *args)
 	return 0;
 }
 
-__device__ void parallel_update(float *a, float *b)
+__device__ void cuda_update(float *a, float *b)
 {
 	float neighbours[9] = {0};
 	von_neumann_neighbours(threadIdx.x, threadIdx.y, blockDim.x, blockDim.y, a, neighbours);

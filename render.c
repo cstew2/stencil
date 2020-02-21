@@ -23,7 +23,7 @@ GLuint vbo;
 GLuint tex;
 GLuint shader;
 
-void gl_init(int width, int height)
+int gl_init(int width, int height)
 {
 	tex_width = width;
 	tex_height = height;
@@ -32,11 +32,11 @@ void gl_init(int width, int height)
 	glfwSetErrorCallback(gl_glfw_error_callback);
 	if (!glfwInit()) {
 		printf("Could not start GLFW\n");
-		return;
+		return -1;
 	}
 	
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 4);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	glfwWindowHint(GLFW_DOUBLEBUFFER, GL_TRUE);
@@ -51,7 +51,7 @@ void gl_init(int width, int height)
 	if (!window) {
 		printf("Could not open window with GLFW\n");
 		glfwTerminate();
-		return;
+		return -1;
 	}
 	
 	glfwMakeContextCurrent(window);
@@ -88,6 +88,8 @@ void gl_init(int width, int height)
 	init_quad();
 	printf("Initializing fullscreen texture\n");
 	init_texture(tex_width, tex_height);
+
+	return 0;
 }
 
 void gl_render(uint32_t *image, int width, int height)

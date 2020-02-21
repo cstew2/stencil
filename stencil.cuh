@@ -3,12 +3,14 @@
 
 void serial_stencil(int width, int height, int time, float min, float max,
 		    float *initial_state);
-void parallel_stencil(int width, int height, int time, float min, float max,
-		      float *initial_state);
 void threaded_stencil(int width, int height, int time, float min, float max, int threads,
 		      float *initial_state);
+void openmp_stencil(int width, int height, int time, float min, float max, int threads,
+		    float *initial_state);
+void cuda_stencil(int width, int height, int time, float min, float max,
+		  float *initial_state);
+__device__ void cuda_update(float *a, float *b);
 
-__device__ void parallel_update(float *a, float *b);
 void *threaded_update(void *args);
 
 __device__ __host__ void moore_neighbours(int x, int y, int width, int height,

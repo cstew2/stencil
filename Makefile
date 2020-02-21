@@ -4,13 +4,13 @@ CC		= g++
 CFLAGS		= 
 
 NVCC		= nvcc
-NVCFLAGS	=
+NVCFLAGS	= -Xcompiler -fopenmp 
 
 DCFLAGS         := -g -ggdb3 -O0
 RCFLAGS         := -march=native -O2 -pipe
 
 NVDCFLAGS       := -g -G
-NVRCFLAGS       := -O2
+NVRCFLAGS       := -O2 
 
 SRC		= $(wildcard *.c)
 INC		= $(wildcard *.h)
@@ -20,7 +20,7 @@ NVSRC		= $(wildcard *.cu)
 NVINC		= $(wildcard *.cuh)
 NVOBJ	        = $(NVSRC:%.cu=%.o)
 
-LIBS		= -lglfw -lGLEW -lGLU -lGL -lm -lpthread
+LIBS		= -lglfw -lGLEW -lGLU -lGL -lm -lpthread -lgomp
 
 
 .PHONY: debug 

@@ -3,7 +3,7 @@
 
 #include <GLFW/glfw3.h>
 
-void gl_init(int width, int height);
+int gl_init(int width, int height);
 int gl_update(void);
 void gl_render(uint32_t *image, int width, int height);
 void gl_cleanup(void);
