@@ -1,13 +1,13 @@
 TARGET          = stencil
 
 CC		= g++
-CFLAGS		= 
+CFLAGS		= -fopenmp
 
 NVCC		= nvcc
-NVCFLAGS	= -Xcompiler -fopenmp 
+NVCFLAGS	= -Xcompiler -fopenmp -dc
 
 DCFLAGS         := -g -ggdb3 -O0
-RCFLAGS         := -march=native -O2 -pipe
+RCFLAGS         := -O2 -ftree-loop-vectorize -ftree-vectorize -finline-functions -funswitch-loops -s -pipe -march=native
 
 NVDCFLAGS       := -g -G
 NVRCFLAGS       := -O2 
